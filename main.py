@@ -51,7 +51,10 @@ def sys_bank():
             print("Sacar")
             saque = 0
             saque += valida_decimal()
-            if saque > 0 and saldo >= saque and contador_saque < LIMITE_NUMERO_SAQUE_DIARIO and saque <= LIMITE_VALOR_SAQUE_POR_OPERACAO:
+            if (saque > 0 
+                and saldo >= saque 
+                and contador_saque < LIMITE_NUMERO_SAQUE_DIARIO 
+                and saque <= LIMITE_VALOR_SAQUE_POR_OPERACAO):
                 saldo -= saque
                 contador_saque += 1
                 extrato = adiciona_linha_extrato(extrato, saque, " -> SAQUE....... -")

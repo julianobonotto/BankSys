@@ -185,6 +185,3 @@ def sys_bank():
 if __name__ == '__main__':
     print('Iniciando Sys Bank')
     sys_bank()
-
-
-

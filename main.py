@@ -1,34 +1,38 @@
 import decimal as d
 from datetime import datetime
+from classes.PessoaFisica import PessoaFisica
+from classes.BancoDeDados import BancoDeDados
+from classes.Conta import Conta
 
-class PessoaFisica:
-    def __init__(self, cpf, nome, data_nascimento, endereco):
-        self.cpf = cpf
-        self.nome = nome
-        self.data_nascimento = data_nascimento
-        self.endereco = endereco
+def cadastra_nova_pessoa_fisica(banco_de_dados):
+    cpf = input("Digite CPF: ")
+    pessoa_esta_cadastrada, pessoa = busca_cpf_pessoa_fisica_cadastrado(cpf, banco_de_dados.lista_pessoa_fisica())
+    if pessoa_esta_cadastrada == False:
+        nome = input("Digite Nome: ")
+        data_nascimento = input("Digite Data Nascimento: ")
+        nova_pessoa_fisica = PessoaFisica(cpf, nome, data_nascimento)
+        banco_de_dados.adiciona_pessoa_fisica(nova_pessoa_fisica)
+    else:
+        print("Pessoa já cadastrada")
+    return banco_de_dados
 
-class ContaCorrente:
-     def __init__(self, numero, cliente):
-        self.saldo = 0
-        self.numero = numero
-        self.agencia = "0001"
-        self.cliente = cliente
-        self.operacoes_financeiras = []
+def busca_cpf_pessoa_fisica_cadastrado(cpf, pessoas_fisicas):
+    for pessoa in pessoas_fisicas:
+        if cpf == pessoa.cpf:
+            return True, pessoa
+    return False, 0
 
-class Cliente():
-     def __init__(self, pessoa_fisica):
-        self.pessoa_fisica = pessoa_fisica
-        self.contas = []
-        self.indice_conta = 0
-
-class Saque_ou_deposito():
-    def __init__(self, operacao, valor):
-        self.data_hora = datetime.now()
-        self.operacao = operacao
-        self.valor = valor
-
-
+def cadastra_nova_conta_corrente(banco_de_dados):
+    cpf = input("Digite CPF do Cliente: ")
+    pessoa_esta_no_db, cliente_cadastrado = busca_cpf_pessoa_fisica_cadastrado(cpf, banco_de_dados.lista_pessoa_fisica())
+    if pessoa_esta_no_db:
+        nova_conta = Conta(cliente_cadastrado, banco_de_dados.fornece_numero_conta_corrente())
+        banco_de_dados.adiciona_conta(nova_conta)
+        return banco_de_dados
+    else:
+        print("CPF não cadastrado, impossivel abrir conta")
+        return banco_de_dados
+    
 def valida_decimal():
     input_retorno = 0
     input_cliente = input("Digite valor da operacao: ")
@@ -43,68 +47,14 @@ def valida_decimal():
         pass
     return input_retorno
 
-def realiza_operacao_financeira(extrato, valor, operacao):
-    data_hora = datetime.now()
-    extrato += f"{data_hora}  {operacao}  R${valor:.2f}\n"
-    return extrato
-
-def adiciona_linha_extrato(extrato, valor, operacao):
-    data_hora = datetime.now()
-    extrato += f"{data_hora}  {operacao}  R${valor:.2f}\n"
-    return extrato
-
-def busca_cpf_cadastrado(cpf, clientes_cadastrados):
-    return [cliente for cliente in clientes_cadastrados if cliente.cpf == cpf]
-
-def cadastra_cliente(clientes_cadastrados):
-    cpf = input("Digite CPF: ")
-    nome = input("Digite Nome: ")
-    data_nascimento = input("Data Nascimento: ")
-    endereco = input("Endereço: ")
-
-    cliente_filtrado = busca_cpf_cadastrado(cpf, clientes_cadastrados)
-    if cliente_filtrado:
-            print("CPF/cliente já cadastrado")
-    else:
-        clientes_cadastrados.append(PessoaFisica(cpf = cpf, nome = nome, data_nascimento = data_nascimento, endereco = endereco))
-
-    return clientes_cadastrados
-
-def lista_clientes(clientes_cadastrados):
-    for cli in clientes_cadastrados:
-        print(cli.cpf, " ", cli.nome, " ", cli.data_nascimento, " ", cli.endereco)
-
-def cadastra_nova_conta(clientes_cadastrados, proximo_numero_de_conta):
-    nova_conta = 0
-    cpf = input("Digite CPF do Cliente: ")
-    cliente_cadastrado = busca_cpf_cadastrado(cpf, clientes_cadastrados)
-    if cliente_cadastrado:
-        nova_conta = ContaCorrente(proximo_numero_de_conta, cliente_cadastrado)
-        proximo_numero_de_conta = gera_numero_conta_nova(proximo_numero_de_conta)
-    else:
-        print("CPF não cadastrado, impossivel abrir conta")
-
-    return nova_conta, proximo_numero_de_conta
-
-def gera_numero_conta_nova(proximo_numero_de_conta):
-    proximo_numero_de_conta += 1
-    return proximo_numero_de_conta
-
-
 def sys_bank():
-    saldo = 0
-    contador_saque = 0
-    extrato = '===========EXTRATO============\n'
-    LIMITE_NUMERO_SAQUE_DIARIO = 3
-    LIMITE_VALOR_SAQUE_POR_OPERACAO = 500.00
-    clientes_cadastrados = []
-    contas = []
-    proximo_numero_de_conta = 1000
+    banco_de_dados = BancoDeDados()
 
     menu = """
-[nc] Novo Cliente
-[lc] Lista Cliente
+[nc] Novo Cliente / Pessoa Fisica
+[lc] Lista Cliente / Pessoa Fisica
 [cc] Nova Conta
+[lcc] Lista Contas Corente
 [d] Depositar
 [s] Sacar
 [e] Extrato
@@ -113,70 +63,63 @@ def sys_bank():
 => """
     while True:
         opcao = input(menu)
-        if opcao == "d":
+        if opcao == "nc":
+            print("Cadastro Novo Cliente / PF")
+            banco_de_dados = cadastra_nova_pessoa_fisica(banco_de_dados)
+
+        elif opcao == "d":
             print("Depositar")
             conta_para_deposito = input("Informe a Conta Corrente: ")
-            #buscar dentro de -> contas
-            for conta in contas:
+            for conta in banco_de_dados.lista_contas():
                 if str(conta.numero) == conta_para_deposito:
                     valor = 0
                     valor += valida_decimal()
                     if valor > 0 :
-                        deposito = Saque_ou_deposito("DEPOSITO", valor)
-                        conta.operacoes_financeiras.append(deposito)
-                        conta.saldo += valor
+                        conta.adiciona_transacao(f"{datetime.now()}    DEPOSITO    + {valor}")
+                        conta.atualiza_saldo(valor)
                 else:
-                    print("conta não cadastrada")            
-
+                    print("conta não cadastrada")    
+    
         elif opcao == "s":
             print("Sacar")
             conta_para_saque = input("Informe a Conta Corrente: ")
-            #buscar dentro de -> contas
-            for conta in contas:
+            for conta in banco_de_dados.lista_contas():
                 if str(conta.numero) == conta_para_saque:
                     valor = 0
                     valor += valida_decimal()
-                    if (valor > 0 
-                        and conta.saldo >= valor 
-                        and contador_saque < LIMITE_NUMERO_SAQUE_DIARIO 
-                        and valor <= LIMITE_VALOR_SAQUE_POR_OPERACAO):
-                        saque = Saque_ou_deposito("SAQUE  -", valor)
-                        conta.operacoes_financeiras.append(saque)
-                        conta.saldo -= valor
+                    if valor > 0 :
+                        conta.adiciona_transacao(f"{datetime.now()}    SAQUE       - {valor}")
+                        conta.atualiza_saldo(-abs(valor))
                 else:
-                    print("conta não cadastrada")        
-
-        elif opcao == "nc":
-            print("Cadastro de Cliente")
-            clientes_cadastrados = cadastra_cliente(clientes_cadastrados)
-            for cli in clientes_cadastrados:
-                print(cli.nome)
+                    print("conta não cadastrada")    
 
         elif opcao == "lc":
-            print("Lista de Clientes")
-            lista_clientes(clientes_cadastrados)
+            print("Lista de Clientes / PF")
+            for cliente in banco_de_dados.lista_pessoa_fisica():
+                print(f"CPF = {cliente.cpf} , Nome = {cliente.nome} , Data Nasc = {cliente.data_nascimento}")
+
+        elif opcao == "lcc":
+            print("Lista Contas Correntes")
+            for conta in banco_de_dados.lista_contas():
+                print(f"CC = {conta.numero} , Cliente = {conta.cliente_pf} , saldo = {conta.saldo}")
 
         elif opcao == "cc":
             print("Cadastra Nova Conta")
-            nova_conta, proximo_numero_de_conta = cadastra_nova_conta(clientes_cadastrados, proximo_numero_de_conta)
-            if nova_conta == 0:
-                print("Nao cadastrado")
-            else:
-                contas.append(nova_conta)
-                print("Nome Cliente = ", nova_conta.cliente[0].nome, " Numero Conta = ", nova_conta.numero," Saldo = ", nova_conta.saldo)
+            banco_de_dados  = cadastra_nova_conta_corrente(banco_de_dados)
         
         elif opcao == "e":
+            print("Extrato")
             conta_corrente_informada = input("Digite numero conta para ver extrato: ")
-            for conta in contas:
+            for conta in banco_de_dados.lista_contas():
                 if str(conta.numero) == conta_corrente_informada:
-                    print(f"Extrato da conta de Numero = {conta.numero}\n")   
-                    for operacao_financeira in conta.operacoes_financeiras:
-                        print(operacao_financeira.data_hora, "   ", operacao_financeira.operacao, "   ", operacao_financeira.valor)
+                    print(f"Extrato da conta de Numero = {conta.numero}\n")
+                    print(conta.extrato())
                     print("\n==========================\n SALDO EM CONTA = ", conta.saldo)
 
         elif opcao == "q":
             print("Sair")
             break
+
         else:
             print("Opção inválida")
 

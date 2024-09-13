@@ -1,7 +1,7 @@
 # BankSys
 Desafio Bank Sys para Bootcamp.
-Simples, Algumas Classes Adicionadas.
+versão POO 
 
-- Números de Conta Corrente iniciam em 1000
-- É preciso melhorar tratamento de erros
-- Aplicar POO
+- Precisa melhorar Transações, usando interface.
+- Tratamento de Erros
+- e mais...
